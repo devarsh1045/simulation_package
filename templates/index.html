@@ -1,0 +1,2837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUMO Traffic Simulation Control</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .booth-card {
+            margin-bottom: 15px;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s;
+        }
+        .booth-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .revenue-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .control-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .status-running {
+            background-color: #28a745;
+            animation: pulse 1.5s infinite;
+        }
+        .status-stopped {
+            background-color: #dc3545;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .flow-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .booth-revenue {
+            text-align: center;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .queue-indicator {
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .queue-low {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .queue-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .queue-high {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .queue-bar {
+            height: 20px;
+            background: linear-gradient(to right, #28a745, #ffc107, #dc3545);
+            border-radius: 10px;
+            position: relative;
+            margin-top: 5px;
+        }
+        .queue-fill {
+            height: 100%;
+            background: #007bff;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        .breakdown-indicator {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 3px 8px;
+            background: #dc3545;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: none;
+        }
+        .breakdown-indicator.active {
+            display: block;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
+        }
+        .breakdown-controls {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+        .booth-card.has-breakdown {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .closed-indicator {
+            position: absolute;
+            top: 5px;
+            right: 80px;
+            padding: 3px 8px;
+            background: #6c757d;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: none;
+        }
+        .closed-indicator.active {
+            display: block;
+        }
+        .booth-card.is-closed {
+            border-color: #6c757d;
+            background-color: #f5f5f5;
+            opacity: 0.7;
+        }
+        .booth-card.is-closed .card-header {
+            background-color: #6c757d !important;
+        }
+        .lane-closure-controls {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* ================================================================== */
+        /* DETECTOR-BASED WAIT TIME DASHBOARD STYLES                          */
+        /* ================================================================== */
+
+        .detector-wait-dashboard {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .detector-wait-dashboard h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 26px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        /* Zone Statistics Cards */
+        .zone-stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .zone-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .zone-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .canada-zone {
+            border-left: 5px solid #e74c3c;
+        }
+
+        .us-zone {
+            border-left: 5px solid #3498db;
+        }
+
+        .zone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .zone-header h3 {
+            margin: 0;
+            font-size: 20px;
+            color: #2c3e50;
+        }
+
+        .zone-label {
+            background: #ecf0f1;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .zone-metrics {
+            margin-bottom: 20px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-family: 'Courier New', monospace;
+        }
+
+        .zone-footer {
+            display: flex;
+            justify-content: space-around;
+            background: #ecf0f1;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .footer-stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        /* Overall Summary Card */
+        .overall-summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .overall-summary-card h3 {
+            margin: 0 0 20px 0;
+            font-size: 22px;
+        }
+
+        .overall-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .overall-stat-item {
+            text-align: center;
+        }
+
+        .overall-label {
+            display: block;
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .overall-value {
+            display: block;
+            font-size: 28px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Comparison Section */
+        .comparison-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .comparison-section h3 {
+            margin: 0 0 20px 0;
+            color: #2c3e50;
+        }
+
+        .comparison-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .comparison-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .comparison-label {
+            min-width: 120px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .bar-container {
+            flex: 1;
+            background: #ecf0f1;
+            border-radius: 10px;
+            height: 35px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .canada-bar {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .us-bar {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .bar-value {
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Export Controls */
+        .detector-export-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .detector-export-controls h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+        }
+
+        .detector-export-controls .export-btn {
+            margin-right: 10px;
+            padding: 12px 24px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .detector-export-controls .export-btn:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .zone-stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .overall-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .comparison-label {
+                min-width: auto;
+            }
+            
+            .bar-container {
+                width: 100%;
+            }
+        }
+
+        /* Animation for updating values */
+        @keyframes valueUpdate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); color: #e74c3c; }
+            100% { transform: scale(1); }
+        }
+
+        .metric-value.updating {
+            animation: valueUpdate 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4"> Blue Water Bridge Simulation </h1>
+        
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h4>
+                        <span id="status-indicator" class="status-indicator status-stopped"></span>
+                        Status: <span id="status-text" class="text-danger">Stopped</span>
+                    </h4>
+                    <p class="mb-0">Simulation Time: <span id="sim-time">0.0</span>s</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <button id="start-btn" class="btn btn-success btn-lg me-2" onclick="startSimulation()">
+                        ▶️ Start Simulation
+                    </button>
+                    <button id="stop-btn" class="btn btn-danger btn-lg" onclick="stopSimulation()" disabled>
+                        ⏹️ Stop Simulation
+                    </button>
+                </div>
+                <div class="col-md-4 text-end">
+                    <h3 class="revenue-display">Total: $<span id="total-revenue">0</span></h3>
+                    <p class="mb-1">Total Queue: <span id="total-queue" class="badge bg-warning text-dark">0</span> vehicles</p>
+                    <button class="btn btn-secondary btn-sm me-1" onclick="resetFlows()">Reset All Flows</button>
+                    <button class="btn btn-warning btn-sm me-1" onclick="clearAllBreakdowns()">Clear All Breakdowns</button>
+                    <button class="btn btn-dark btn-sm" onclick="clearAllClosures()">Open All Lanes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toll Booths Grid -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3>Toll Booth Controls & Revenue</h3>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Booth 0 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-0">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 Toll Booth 0</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_0">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_0">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="booth-revenue">
+                            <div>Revenue: <strong>$<span id="revenue-booth_0">0</span></strong></div>
+                            <div>Vehicles: <span id="vehicles-booth_0">0</span></div>
+                        </div>
+                        <div id="queue-indicator-booth_0" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_0">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_0" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_0">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_0" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_0" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_0')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_0')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_0')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_0')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_0')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booth 1 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-1">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 Toll Booth 1</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_1">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_1">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="booth-revenue">
+                            <div>Revenue: <strong>$<span id="revenue-booth_1">0</span></strong></div>
+                            <div>Vehicles: <span id="vehicles-booth_1">0</span></div>
+                        </div>
+                        <div id="queue-indicator-booth_1" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_1">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_1" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_1">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_1" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_1" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_1')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_1')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_1')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_1')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_1')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booth 2 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-2">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 Toll Booth 2</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_2">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_2">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="booth-revenue">
+                            <div>Revenue: <strong>$<span id="revenue-booth_2">0</span></strong></div>
+                            <div>Vehicles: <span id="vehicles-booth_2">0</span></div>
+                        </div>
+                        <div id="queue-indicator-booth_2" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_2">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_2" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_2">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_2" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_2" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_2')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_2')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_2')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_2')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_2')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booth 3 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-3">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 Toll Booth 3</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_3">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_3">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="booth-revenue">
+                            <div>Revenue: <strong>$<span id="revenue-booth_3">0</span></strong></div>
+                            <div>Vehicles: <span id="vehicles-booth_3">0</span></div>
+                        </div>
+                        <div id="queue-indicator-booth_3" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_3">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_3" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_3">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_3" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_3" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_3')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_3')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_3')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_3')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_3')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booth 4 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-4">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 Toll Booth 4</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_4">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_4">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="booth-revenue">
+                            <div>Revenue: <strong>$<span id="revenue-booth_4">0</span></strong></div>
+                            <div>Vehicles: <span id="vehicles-booth_4">0</span></div>
+                        </div>
+                        <div id="queue-indicator-booth_4" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_4">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_4" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_4">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_4" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_4" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_4')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_4')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_4')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_4')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_4')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booth 5 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-5">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 Toll Booth 5</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_5">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_5">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="booth-revenue">
+                            <div>Revenue: <strong>$<span id="revenue-booth_5">0</span></strong></div>
+                            <div>Vehicles: <span id="vehicles-booth_5">0</span></div>
+                        </div>
+                        <div id="queue-indicator-booth_5" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_5">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_5" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_5">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_5" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_5" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_5')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_5')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_5')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_5')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_5')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Booth 6 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-6">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 1</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_6">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_6">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div id="queue-indicator-booth_6" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_6">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_6" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_6">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_6" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_6" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_6')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_6')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_6')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_6')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_6')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 7 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-7">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 2</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_7">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_7">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="queue-indicator-booth_7" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_7">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_7" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_7">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_7" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_7" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_7')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_7')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_7')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_7')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_7')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 8 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-8">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 3</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_8">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_8">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="queue-indicator-booth_8" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_8">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_8" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_8">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_8" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_8" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_8')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_8')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_8')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_8')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_8')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 9 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-9">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 4</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_9">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_9">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="queue-indicator-booth_9" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_9">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_9" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_9">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_9" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_9" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_9')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_9')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_9')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_9')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_9')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 10 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-10">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 5</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_10">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_10">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="queue-indicator-booth_10" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_10">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_10" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_10">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_10" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_10" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_10')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_10')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_10')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_10')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_10')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 11 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-11">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 6</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_11">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_11">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="queue-indicator-booth_11" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_11">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_11" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_11">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_11" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_11" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_11')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_11')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_11')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_11')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_11')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 12 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-12">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 7</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_12">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_12">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="queue-indicator-booth_12" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_12">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_12" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_12">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_12" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_12" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_12')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_12')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_12')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_12')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_12')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 13 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-13">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 8</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_13">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_13">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                       
+                        <div id="queue-indicator-booth_13" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_13">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_13" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_13">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_13" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_13" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_13')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_13')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_13')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_13')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_13')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 14 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-14">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 9</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_14">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_14">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                       
+                        <div id="queue-indicator-booth_14" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_14">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_14" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_14">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_14" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_14" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_14')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_14')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_14')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_14')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_14')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 15 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-15">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂CBP Booth 10</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_15">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_15">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div id="queue-indicator-booth_15" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_15">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_15" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_15">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_15" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_15" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_15')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_15')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_15')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_15')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_15')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 16 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-16">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 11</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_16">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_16">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div id="queue-indicator-booth_16" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_16">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_16" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_16">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_16" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_16" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_16')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_16')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_16')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_16')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_16')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 17 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-17">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 12</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_17">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_17">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div id="queue-indicator-booth_17" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_17">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_17" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_17">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_17" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_17" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_17')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_17')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_17')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_17')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_17')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 18 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-18">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 13</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_18">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_18">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div id="queue-indicator-booth_18" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_18">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_18" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_18">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_18" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_18" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_18')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_18')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_18')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_18')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_18')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Booth 19 -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="booth-card-19">
+                    <div class="card-header bg-primary text-white position-relative">
+                        <h5 class="mb-0">🛂 CBP Booth 14</h5>
+                        <span class="closed-indicator" id="closed-indicator-booth_19">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-booth_19">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div id="queue-indicator-booth_19" class="queue-indicator queue-low">
+                            Queue: <span id="queue-booth_19">0</span> vehicles
+                        </div>
+                        <div class="queue-bar">
+                            <div id="queue-bar-booth_19" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-booth_19">0</span>%
+                        </div>
+                        <label>Flow Rate (veh/hr):</label>
+                        <div class="flow-control">
+                            <input type="range" class="form-range" id="flow-booth_19" min="100" max="2000" value="100" step="50">
+                            <input type="number" class="form-control" style="width: 100px" id="flow-value-booth_19" value="100" min="100" max="2000">
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="updateFlow('booth_19')">Apply</button>
+                        
+                        <div class="breakdown-controls">
+                            <label>Breakdown Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-danger" onclick="triggerBreakdown('booth_19')">
+                                    🚨 Trigger Breakdown
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="clearBreakdown('booth_19')">
+                                    ✅ Clear Breakdown
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lane-closure-controls">
+                            <label>Lane Closure Control:</label>
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-dark" onclick="closeLane('booth_19')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openLane('booth_19')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <h3>Main Lane Controls (Highway E3)</h3>
+        </div>
+        <div class="row">
+            <!-- all main lane cards go here -->
+            <div class="col-md-4">
+                <div class="card booth-card" id="main-card-main_0">
+                    <div class="card-header bg-warning text-dark position-relative">
+                        <h5 class="mb-0">🛣 Main Lane 1</h5>
+                        <span class="closed-indicator" id="closed-indicator-main_0">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-main_0">BREAKDOWN</span>
+                    </div>
+
+                    <div class="card-body">
+
+                        <!-- VEHICLE TYPE SELECTOR -->
+                        <label class="mt-1"><strong>Allowed Vehicles:</strong></label>
+                        <select id="vehType-main_0" class="form-select"
+                            onchange="setMainLaneMode('main_0', this.value)">
+                            <option value="cars">Cars Only</option>
+                            <option value="trucks">Trucks Only</option>
+                            <option value="both" selected>Cars + Trucks</option>
+                        </select>
+
+                        <!-- Queue + Occupancy -->
+                        <div id="queue-indicator-main_0" class="queue-indicator queue-low">
+                            Queue: <span id="queue-main_0">0</span> vehicles
+                        </div>
+
+                        <div class="queue-bar">
+                            <div id="queue-bar-main_0" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <!--Occupancy-->
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-main_0">0</span>%
+                        </div>
+                        <!--CLosure buttons-->
+                        <div class="lane-closure-controls mt-3">
+                            <label>Main Lane Closure:</label>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-sm btn-dark" onclick="closeMainLane('main_0')">
+                                    🚧 Close Lane
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="openMainLane('main_0')">
+                                    ✅ Open Lane
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card booth-card" id="main-card-main_1">
+                    <div class="card-header bg-warning text-dark position-relative">
+                        <h5 class="mb-0">🛣 Main Lane 2</h5>
+                        <span class="closed-indicator" id="closed-indicator-main_1">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-main_1">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- VEHICLE TYPE SELECTOR -->
+                        <label class="mt-2"><strong>Allowed Vehicles:</strong></label>
+                        <select id="vehType-main_1" class="form-select"
+                            onchange="setMainLaneMode('main_1', this.value)">
+                            <option value="cars">Cars Only</option>
+                            <option value="trucks">Trucks Only</option>
+                            <option value="both" selected>Cars + Trucks</option>
+                        </select>
+                        <!-- Queue-->
+                        <div id="queue-indicator-main_1" class="queue-indicator queue-low">
+                            Queue: <span id="queue-main_1">0</span> vehicles
+                        </div>
+
+                        <div class="queue-bar">
+                            <div id="queue-bar-main_1" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <!--Occupancy-->
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-main_1">0</span>%
+                        </div>
+                        <!--CLosure buttons-->
+                        <div class="lane-closure-controls mt-3">
+                            <label>Main Lane Closure:</label>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-sm btn-dark" onclick="closeMainLane('main_1')">🚧 Close Lane</button>
+                                <button class="btn btn-sm btn-primary" onclick="openMainLane('main_1')">✅ Open Lane</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card booth-card" id="main-card-main_2">
+                    <div class="card-header bg-warning text-dark position-relative">
+                        <h5 class="mb-0">🛣 Main Lane E3_2</h5>
+                        <span class="closed-indicator" id="closed-indicator-main_2">CLOSED</span>
+                        <span class="breakdown-indicator" id="breakdown-indicator-main_2">BREAKDOWN</span>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- VEHICLE TYPE SELECTOR -->
+                        <label class="mt-2"><strong>Allowed Vehicles:</strong></label>
+                        <select id="vehType-main_2" class="form-select"
+                            onchange="setMainLaneMode('main_2', this.value)">
+                            <option value="cars">Cars Only</option>
+                            <option value="trucks">Trucks Only</option>
+                            <option value="both" selected>Cars + Trucks</option>
+                        </select>
+                        <!-- Queue-->
+                        <div id="queue-indicator-main_2" class="queue-indicator queue-low">
+                            Queue: <span id="queue-main_2">0</span> vehicles
+                        </div>
+
+                        <div class="queue-bar">
+                            <div id="queue-bar-main_2" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <!--Occupancy-->
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-main_2">0</span>%
+                        </div>
+                        <!--CLosure buttons-->
+                        <div class="lane-closure-controls mt-3">
+                            <label>Main Lane Closure:</label>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-sm btn-dark" onclick="closeMainLane('main_2')">🚧 Close Lane</button>
+                                <button class="btn btn-sm btn-primary" onclick="openMainLane('main_2')">✅ Open Lane</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card booth-card" id="main-card-main_3">
+                    <div class="card-header bg-warning text-dark position-relative">
+                        <h5 class="mb-0">🛣 Main Lane E3_3</h5>
+                        <span class="closed-indicator" id="closed-indicator-main_3">CLOSED</span>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- VEHICLE TYPE SELECTOR -->
+                        <label class="mt-3"><strong>Allowed Vehicles:</strong></label>
+                        <select id="vehType-main_3" class="form-select"
+                            onchange="setMainLaneMode('main_3', this.value)">
+                            <option value="cars">Cars Only</option>
+                            <option value="trucks">Trucks Only</option>
+                            <option value="both" selected>Cars + Trucks</option>
+                        </select>
+                        <!-- Queue-->
+                        <div id="queue-indicator-main_3" class="queue-indicator queue-low">
+                            Queue: <span id="queue-main_3">0</span> vehicles
+                        </div>
+
+                        <div class="queue-bar">
+                            <div id="queue-bar-main_3" class="queue-fill" style="width: 0%"></div>
+                        </div>
+                        <!--Occupancy-->
+                        <div class="mt-2 text-muted small">
+                            Occupancy: <span id="occupancy-main_3">0</span>%
+                        </div>
+                        <!--CLosure buttons-->
+                        <div class="lane-closure-controls mt-3">
+                            <label>Main Lane Closure:</label>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-sm btn-dark" onclick="closeMainLane('main_3')">🚧 Close Lane</button>
+                                <button class="btn btn-sm btn-primary" onclick="openMainLane('main_3')">✅ Open Lane</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================= -->
+            <!-- BRIDGE LANES SECTION (E8_0, E8_1, E8_2) -->
+            <!-- ========================================= -->
+
+
+            <div class="row mt-4">
+                <h3>Bridge Lane Controls (Edge E8)</h3>
+            </div>
+            <div class="row">
+                <!-- Bridge Lane 0 (E8_0) -->
+                <div class="col-md-4">
+                    <div class="card booth-card" id="bridge-card-bridge_0">
+                        <div class="card-header bg-info text-white position-relative">
+                            <h5 class="mb-0">🌉 Bridge Lane E8_0</h5>
+                            <span class="closed-indicator" id="closed-indicator-bridge_0">CLOSED</span>
+                            <span class="breakdown-indicator" id="breakdown-indicator-bridge_0">BREAKDOWN</span>
+                        </div>
+                        <div class="card-body">
+
+                            <!-- VEHICLE TYPE SELECTOR -->
+                            <label class="mt-2"><strong>Allowed Vehicles:</strong></label>
+                            <select id="vehType-bridge_0" class="form-select"
+                                onchange="setBridgeLaneMode('bridge_0', this.value)">
+                                <option value="cars">Cars Only</option>
+                                <option value="trucks">Trucks Only</option>
+                                <option value="both" selected>Cars + Trucks</option>
+                            </select>
+
+                            <!-- Queue -->
+                            <div id="queue-indicator-bridge_0" class="queue-indicator queue-low">
+                                Queue: <span id="queue-bridge_0">0</span> vehicles
+                            </div>
+
+                            <div class="queue-bar">
+                                <div id="queue-bar-bridge_0" class="queue-fill" style="width: 0%"></div>
+                            </div>
+
+                            <!-- Occupancy -->
+                            <div class="mt-2 text-muted small">
+                                Occupancy: <span id="occupancy-bridge_0">0</span>%
+                            </div>
+
+                            <!-- Breakdown Controls -->
+                            <div class="breakdown-controls mt-3">
+                                <label>Breakdown Control:</label>
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-danger" onclick="breakBridgeLane('bridge_0')">
+                                        🚨 Trigger
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="fixBridgeLane('bridge_0')">
+                                        ✅ Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Closure Controls -->
+                            <div class="lane-closure-controls mt-3">
+                                <label>Lane Closure:</label>
+                                <div class="btn-group w-100">
+                                    <button class="btn btn-sm btn-dark" onclick="closeBridgeLane('bridge_0')">
+                                        🚧 Close Lane
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="openBridgeLane('bridge_0')">
+                                        ✅ Open Lane
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bridge Lane 1 (E8_1) -->
+                <div class="col-md-4">
+                    <div class="card booth-card" id="bridge-card-bridge_1">
+                        <div class="card-header bg-info text-white position-relative">
+                            <h5 class="mb-0">🌉 Bridge Lane E8_1</h5>
+                            <span class="closed-indicator" id="closed-indicator-bridge_1">CLOSED</span>
+                            <span class="breakdown-indicator" id="breakdown-indicator-bridge_1">BREAKDOWN</span>
+                        </div>
+                        <div class="card-body">
+
+                            <!-- VEHICLE TYPE SELECTOR -->
+                            <label class="mt-2"><strong>Allowed Vehicles:</strong></label>
+                            <select id="vehType-bridge_1" class="form-select"
+                                onchange="setBridgeLaneMode('bridge_1', this.value)">
+                                <option value="cars">Cars Only</option>
+                                <option value="trucks">Trucks Only</option>
+                                <option value="both" selected>Cars + Trucks</option>
+                            </select>
+
+                            <!-- Queue -->
+                            <div id="queue-indicator-bridge_1" class="queue-indicator queue-low">
+                                Queue: <span id="queue-bridge_1">0</span> vehicles
+                            </div>
+
+                            <div class="queue-bar">
+                                <div id="queue-bar-bridge_1" class="queue-fill" style="width: 0%"></div>
+                            </div>
+
+                            <!-- Occupancy -->
+                            <div class="mt-2 text-muted small">
+                                Occupancy: <span id="occupancy-bridge_1">0</span>%
+                            </div>
+
+                            <!-- Breakdown Controls -->
+                            <div class="breakdown-controls mt-3">
+                                <label>Breakdown Control:</label>
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-danger" onclick="breakBridgeLane('bridge_1')">
+                                        🚨 Trigger
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="fixBridgeLane('bridge_1')">
+                                        ✅ Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Closure Controls -->
+                            <div class="lane-closure-controls mt-3">
+                                <label>Lane Closure:</label>
+                                <div class="btn-group w-100">
+                                    <button class="btn btn-sm btn-dark" onclick="closeBridgeLane('bridge_1')">
+                                        🚧 Close Lane
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="openBridgeLane('bridge_1')">
+                                        ✅ Open Lane
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bridge Lane 2 (E8_2) -->
+                <div class="col-md-4">
+                    <div class="card booth-card" id="bridge-card-bridge_2">
+                        <div class="card-header bg-info text-white position-relative">
+                            <h5 class="mb-0">🌉 Bridge Lane E8_2</h5>
+                            <span class="closed-indicator" id="closed-indicator-bridge_2">CLOSED</span>
+                            <span class="breakdown-indicator" id="breakdown-indicator-bridge_2">BREAKDOWN</span>
+                        </div>
+                        <div class="card-body">
+
+                            <!-- VEHICLE TYPE SELECTOR -->
+                            <label class="mt-2"><strong>Allowed Vehicles:</strong></label>
+                            <select id="vehType-bridge_2" class="form-select"
+                                onchange="setBridgeLaneMode('bridge_2', this.value)">
+                                <option value="cars">Cars Only</option>
+                                <option value="trucks">Trucks Only</option>
+                                <option value="both" selected>Cars + Trucks</option>
+                            </select>
+
+                            <!-- Queue -->
+                            <div id="queue-indicator-bridge_2" class="queue-indicator queue-low">
+                                Queue: <span id="queue-bridge_2">0</span> vehicles
+                            </div>
+
+                            <div class="queue-bar">
+                                <div id="queue-bar-bridge_2" class="queue-fill" style="width: 0%"></div>
+                            </div>
+
+                            <!-- Occupancy -->
+                            <div class="mt-2 text-muted small">
+                                Occupancy: <span id="occupancy-bridge_2">0</span>%
+                            </div>
+
+                            <!-- Breakdown Controls -->
+                            <div class="breakdown-controls mt-3">
+                                <label>Breakdown Control:</label>
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-danger" onclick="breakBridgeLane('bridge_2')">
+                                        🚨 Trigger
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="fixBridgeLane('bridge_2')">
+                                        ✅ Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Closure Controls -->
+                            <div class="lane-closure-controls mt-3">
+                                <label>Lane Closure:</label>
+                                <div class="btn-group w-100">
+                                    <button class="btn btn-sm btn-dark" onclick="closeBridgeLane('bridge_2')">
+                                        🚧 Close Lane
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="openBridgeLane('bridge_2')">
+                                        ✅ Open Lane
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================== -->
+<!-- DETECTOR-BASED WAIT TIME ANALYSIS DASHBOARD                        -->
+<!-- ================================================================== -->
+
+<div class="detector-wait-dashboard">
+    <h2>🚦 Wait Time Analysis </h2>
+    
+    <!-- Zone Statistics Cards -->
+    <div class="zone-stats-container">
+        <!-- Canada Zone Card -->
+        <div class="zone-card canada-zone">
+            <div class="zone-header">
+                <h3>🇨🇦 Canada Toll Booth Zone</h3>
+            </div>
+            <div class="zone-metrics">
+                <div class="metric-row">
+                    <span class="metric-label">Average Wait:</span>
+                    <span class="metric-value" id="canada-avg-wait">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Min Wait:</span>
+                    <span class="metric-value" id="canada-min-wait">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Max Wait:</span>
+                    <span class="metric-value" id="canada-max-wait">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Median Wait:</span>
+                    <span class="metric-value" id="canada-median-wait">--</span>
+                </div>
+            </div>
+            <div class="zone-footer">
+                <div class="footer-stat">
+                    <span class="stat-label">Completed:</span>
+                    <span class="stat-value" id="canada-completed">0</span>
+                </div>
+                <div class="footer-stat">
+                    <span class="stat-label">In Zone:</span>
+                    <span class="stat-value" id="canada-in-zone">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- US Zone Card -->
+        <div class="zone-card us-zone">
+            <div class="zone-header">
+                <h3>🇺🇸 US Inspection Zone</h3>
+            </div>
+            <div class="zone-metrics">
+                <div class="metric-row">
+                    <span class="metric-label">Average Wait:</span>
+                    <span class="metric-value" id="us-avg-wait">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Min Wait:</span>
+                    <span class="metric-value" id="us-min-wait">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Max Wait:</span>
+                    <span class="metric-value" id="us-max-wait">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Median Wait:</span>
+                    <span class="metric-value" id="us-median-wait">--</span>
+                </div>
+            </div>
+            <div class="zone-footer">
+                <div class="footer-stat">
+                    <span class="stat-label">Completed:</span>
+                    <span class="stat-value" id="us-completed">0</span>
+                </div>
+                <div class="footer-stat">
+                    <span class="stat-label">In Zone:</span>
+                    <span class="stat-value" id="us-in-zone">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overall Summary Card -->
+    <div class="overall-summary-card">
+        <h3>📊 Overall Statistics</h3>
+        <div class="overall-stats">
+            <div class="overall-stat-item">
+                <span class="overall-label">Combined Average Wait:</span>
+                <span class="overall-value" id="total-avg-wait">--</span>
+            </div>
+            <div class="overall-stat-item">
+                <span class="overall-label">Total Vehicles Processed:</span>
+                <span class="overall-value" id="total-completed">0</span>
+            </div>
+            <div class="overall-stat-item">
+                <span class="overall-label">System Throughput:</span>
+                <span class="overall-value" id="system-throughput">-- veh/min</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comparison Chart Area (Optional) -->
+    <div class="comparison-section">
+        <h3>Zone Comparison</h3>
+        <div class="comparison-bars">
+            <div class="comparison-item">
+                <span class="comparison-label">Canada Zone</span>
+                <div class="bar-container">
+                    <div class="bar canada-bar" id="canada-bar" style="width: 0%;">
+                        <span class="bar-value" id="canada-bar-value">0s</span>
+                    </div>
+                </div>
+            </div>
+            <div class="comparison-item">
+                <span class="comparison-label">US Zone</span>
+                <div class="bar-container">
+                    <div class="bar us-bar" id="us-bar" style="width: 0%;">
+                        <span class="bar-value" id="us-bar-value">0s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+   
+
+        </div>
+
+
+        
+
+    <script>
+        // Sync slider and number input for each booth
+        for (let i = 0; i <= 19; i++) {
+            const slider = document.getElementById(`flow-booth_${i}`);
+            const numberInput = document.getElementById(`flow-value-booth_${i}`);
+            
+            slider.addEventListener('input', function() {
+                numberInput.value = this.value;
+            });
+            
+            numberInput.addEventListener('input', function() {
+                slider.value = this.value;
+            });
+        }
+
+        let statusInterval = null;
+
+        function startSimulation() {
+            fetch('/start', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'started' || data.status === 'already running') {
+                        document.getElementById('start-btn').disabled = true;
+                        document.getElementById('stop-btn').disabled = false;
+                        document.getElementById('status-text').textContent = 'Running';
+                        document.getElementById('status-text').className = 'text-success';
+                        document.getElementById('status-indicator').className = 'status-indicator status-running';
+                        
+                        // Start polling for status
+                        statusInterval = setInterval(updateStatus, 1000);
+                    }
+                });
+        }
+
+        function stopSimulation() {
+            fetch('/stop', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('stop-btn').disabled = true;
+                    document.getElementById('status-text').textContent = 'Stopped';
+                    document.getElementById('status-text').className = 'text-danger';
+                    document.getElementById('status-indicator').className = 'status-indicator status-stopped';
+                    
+                    // Stop polling
+                    if (statusInterval) {
+                        clearInterval(statusInterval);
+                        statusInterval = null;
+                    }
+                });
+        }
+
+        function updateStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update simulation time
+                    document.getElementById('sim-time').textContent = data.data.time || '0.0';
+                    
+                    // Update total revenue and queue
+                    document.getElementById('total-revenue').textContent = data.data.total_revenue || '0';
+                    document.getElementById('total-queue').textContent = data.data.total_queue || '0';
+                    
+                    // Update booth revenues, vehicle counts, and queues
+                    // Update booth revenues, vehicle counts, and queues
+                    for (let i = 0; i <= 19; i++) {
+                        const boothKey = `booth_${i}`;
+                        const revenue = data.data.revenue[boothKey] || 0;
+                        const vehicles = data.data.vehicle_counts[boothKey] || 0;
+                        const queueLength = data.data.queue_lengths[boothKey] || 0;
+                        const occupancy = data.data.occupancy[boothKey] || 0;
+                        
+                        // Update revenue/vehicles (only for booths 0-5 that have these elements)
+                        const revenueEl = document.getElementById(`revenue-${boothKey}`);
+                        const vehiclesEl = document.getElementById(`vehicles-${boothKey}`);
+                        if (revenueEl) revenueEl.textContent = revenue;
+                        if (vehiclesEl) vehiclesEl.textContent = vehicles;
+                        
+                        // Update queue and occupancy (all booths have these)
+                        const queueEl = document.getElementById(`queue-${boothKey}`);
+                        const occupancyEl = document.getElementById(`occupancy-${boothKey}`);
+                        document.getElementById(`queue-${boothKey}`).textContent = queueLength;
+                        document.getElementById(`occupancy-${boothKey}`).textContent = occupancy;
+                        
+                        // Update queue indicator color
+                        const queueIndicator = document.getElementById(`queue-indicator-${boothKey}`);
+                        if (queueIndicator) {
+                            queueIndicator.className = 'queue-indicator ';
+                            if (queueLength === 0) {
+                                queueIndicator.className += 'queue-low';
+                            } else if (queueLength <= 2) {
+                                queueIndicator.className += 'queue-medium';
+                            } else {
+                                queueIndicator.className += 'queue-high';
+                            }
+                        }
+                        
+                        // Update queue bar width
+                        const queueBar = document.getElementById(`queue-bar-${boothKey}`);
+                        if (queueBar) {
+                            const barWidth = Math.min(100, (queueLength / 5) * 100);
+                            queueBar.style.width = barWidth + '%';
+                        }
+                        
+                        // 🎯 BREAKDOWN INDICATOR UPDATE
+                        const breakdownIndicator = document.getElementById(`breakdown-indicator-${boothKey}`);
+                        const boothCard = document.getElementById(`booth-card-${i}`);
+                        
+                        if (breakdownIndicator && boothCard) {
+                            if (data.breakdown_status && data.breakdown_status[boothKey]) {
+                                breakdownIndicator.classList.add('active');
+                                boothCard.classList.add('has-breakdown');
+                            } else {
+                                breakdownIndicator.classList.remove('active');
+                                boothCard.classList.remove('has-breakdown');
+                            }
+                        }
+
+                        // 🎯 CLOSURE INDICATOR UPDATE
+                        const closedIndicator = document.getElementById(`closed-indicator-${boothKey}`);
+                        if (closedIndicator && boothCard) {
+                            if (data.lane_closure_status && data.lane_closure_status[boothKey]) {
+                                closedIndicator.classList.add('active');
+                                boothCard.classList.add('is-closed');
+                            } else {
+                                closedIndicator.classList.remove('active');
+                                boothCard.classList.remove('is-closed');
+                            }
+                        }
+                    }
+                    // Update flow rate displays
+                    for (let booth in data.flow_rates) {
+                        const slider = document.getElementById(`flow-${booth}`);
+                        const numberInput = document.getElementById(`flow-value-${booth}`);
+                        if (slider && !slider.matches(':focus') && !numberInput.matches(':focus')) {
+                            slider.value = data.flow_rates[booth];
+                            numberInput.value = data.flow_rates[booth];
+                        }
+                    }
+                    // ==============================
+                    // MAIN LANE UI updates (main_0–3)
+                    // ==============================
+                    const mainQueues   = data.data.mainlane_queue       || {};
+                    const mainOccs     = data.data.mainlane_occupancy   || {};
+                    const mainBreaks   = data.data.mainlane_breakdown   || {};
+                    const laneClosures = data.lane_closure_status       || {};
+
+                    for (let lane of ['main_0', 'main_1', 'main_2', 'main_3']) {
+
+                        // Occupancy
+                        const occVal = mainOccs[lane] ?? 0;
+                        const occEl  = document.getElementById(`occupancy-${lane}`);
+                        if (occEl) occEl.innerText = occVal;
+
+                        // Queue
+                        const qVal = mainQueues[lane] ?? 0;
+                        const qEl  = document.getElementById(`queue-${lane}`);
+                        if (qEl) qEl.innerText = qVal;
+
+                        // Queue bar
+                        const barEl = document.getElementById(`queue-bar-${lane}`);
+                        if (barEl) {
+                            const width = Math.min(qVal * 5, 100);  // 0–20 vehicles -> 0–100%
+                            barEl.style.width = width + '%';
+                        }
+
+                        // Breakdown indicator
+                        const bdEl = document.getElementById(`breakdown-indicator-${lane}`);
+                        if (bdEl) {
+                            bdEl.style.display = mainBreaks[lane] ? 'inline-block' : 'none';
+                        }
+
+                        // Closed indicator (using lane_closure_status)
+                        const closedEl = document.getElementById(`closed-indicator-${lane}`);
+                        if (closedEl) {
+                            closedEl.style.display = laneClosures[lane] ? 'inline-block' : 'none';
+                        }
+                        const mode = data.mainlane_mode[lane];
+                        
+
+                        if (mode) {
+                            document.getElementById(`vehType-${lane}`).value = mode;
+                        }
+                        // Sync main lane mode dropdowns from backend
+                        if (data.mainlane_mode) {
+                            ['main_0','main_1','main_2','main_3'].forEach(lane => {
+                                const sel = document.getElementById(`mode-${lane}`);
+                                if (sel && !sel.matches(':focus')) {
+                                    sel.value = data.mainlane_mode[lane] || 'both';
+                                }
+                            });
+                        }
+
+
+                        // queue
+                        document.getElementById(`queue-${lane}`).innerText = data.data.mainlane_queue[lane];
+                        document.getElementById(`occupancy-${lane}`).innerText = data.data.mainlane_occupancy[lane];
+
+                        // queue bar
+                        let width = Math.min(data.data.mainlane_queue[lane] * 5, 100);
+                        document.getElementById(`queue-bar-${lane}`).style.width = width + '%';
+                    }
+
+
+                // ==============================
+                // BRIDGE LANE UI updates (bridge_0, bridge_1, bridge_2)
+                // ==============================
+                const bridgeQueues = data.data.bridgelane_queue || {};
+                const bridgeOccs = data.data.bridgelane_occupancy || {};
+                const bridgeBreaks = data.data.bridgelane_breakdown || {};
+                // laneClosures already defined above for main lanes
+
+                for (let lane of ['bridge_0', 'bridge_1', 'bridge_2']) {
+
+                    // Occupancy
+                    const occVal = bridgeOccs[lane] || 0;
+                    const occEl = document.getElementById(`occupancy-${lane}`);
+                    if (occEl) occEl.innerText = occVal;
+
+                    // Queue
+                    const qVal = bridgeQueues[lane] || 0;
+                    const qEl = document.getElementById(`queue-${lane}`);
+                    if (qEl) qEl.innerText = qVal;
+
+                    // Queue bar
+                    const barEl = document.getElementById(`queue-bar-${lane}`);
+                    if (barEl) {
+                        const width = Math.min(qVal * 5, 100);  // 0-20 vehicles -> 0-100%
+                        barEl.style.width = width + '%';
+                    }
+
+                    // Breakdown indicator
+                    const bdEl = document.getElementById(`breakdown-indicator-${lane}`);
+                    if (bdEl) {
+                        if (bridgeBreaks[lane]) {
+                            bdEl.classList.add('active');
+                        } else {
+                            bdEl.classList.remove('active');
+                        }
+                    }
+
+                    // Closed indicator (using lane_closure_status)
+                    const closedEl = document.getElementById(`closed-indicator-${lane}`);
+                    if (closedEl) {
+                        if (laneClosures[lane]) {
+                            closedEl.classList.add('active');
+                        } else {
+                            closedEl.classList.remove('active');
+                        }
+                    }
+
+                    // Sync bridge lane mode dropdowns from backend
+                    if (data.bridge_lane_modes) {
+                        const sel = document.getElementById(`vehType-${lane}`);
+                        if (sel && !sel.matches(':focus')) {
+                            sel.value = data.bridge_lane_modes[lane] || 'both';
+                        }
+                    }
+                }
+
+
+                    // Update running status
+                    if (!data.running && statusInterval) {
+                        stopSimulation();
+                    }
+                });
+        }
+
+        function updateFlow(booth) {
+            const rate = document.getElementById(`flow-value-${booth}`).value;
+            
+            fetch('/update_flow', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({booth: booth, rate: rate})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`Flow rate for ${booth.replace('_', ' ')} updated to ${rate} veh/hr`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        function resetFlows() {
+            fetch('/reset_flows', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('All flow rates reset to defaults');
+                        updateStatus();
+                    }
+                });
+        }
+
+        function triggerBreakdown(booth) {
+            fetch('/trigger_breakdown', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({booth: booth})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Breakdown triggered for ${booth}`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        function clearBreakdown(booth) {
+            fetch('/clear_breakdown', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({booth: booth})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Breakdown cleared for ${booth}`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        function clearAllBreakdowns() {
+            fetch('/clear_all_breakdowns', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log('All breakdowns cleared');
+                        updateStatus();
+                    }
+                });
+        }
+
+        function closeLane(booth) {
+            fetch('/close_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({booth: booth})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Lane ${booth} closed`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        function openLane(booth) {
+            fetch('/open_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({booth: booth})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Lane ${booth} opened`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        function clearAllClosures() {
+            fetch('/clear_all_closures', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log('All lanes opened');
+                        updateStatus();
+                    }
+                });
+        }
+        function closeMainLane(lane) {
+            fetch('/close_main_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane})
+            });
+        }
+
+        function openMainLane(lane) {
+            fetch('/open_main_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane})
+            });
+        }
+
+        function setMainLaneMode(lane, mode) {
+    // mode = "cars" | "trucks" | "both"
+            fetch('/set_main_lane_mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane, mode: mode})
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                console.log("Updated main lane mode:", lane, mode);
+            });
+        }
+
+        // ============================================
+        // BRIDGE LANE FUNCTIONS
+        // ============================================
+        // Close bridge lane
+        function closeBridgeLane(lane) {
+            fetch('/close_bridge_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Bridge lane ${lane} closed`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        // Open bridge lane
+        function openBridgeLane(lane) {
+            fetch('/open_bridge_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Bridge lane ${lane} opened`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        // Trigger breakdown on bridge lane
+        function breakBridgeLane(lane) {
+            fetch('/break_bridge_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Breakdown triggered on ${lane}`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        // Clear breakdown on bridge lane
+        function fixBridgeLane(lane) {
+            fetch('/fix_bridge_lane', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Breakdown cleared on ${lane}`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+        // Set vehicle mode for bridge lane
+        function setBridgeLaneMode(lane, mode) {
+            fetch('/set_bridge_lane_mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lane: lane, mode: mode})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Mode set for ${lane}: ${mode}`);
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            });
+        }
+
+                // ============================================================================
+        // DETECTOR-BASED WAIT TIME ANALYSIS FRONTEND
+        // ============================================================================
+
+        let detectorStatsUpdateInterval = null;
+        let previousDetectorStats = null;
+
+        // Start updating detector wait time statistics
+        function startDetectorWaitTimeUpdates() {
+            // Update every 3 seconds
+            detectorStatsUpdateInterval = setInterval(updateDetectorWaitTimeDisplay, 3000);
+            
+            // Initial update
+            updateDetectorWaitTimeDisplay();
+            
+            console.log('[DETECTOR WAIT] Started detector wait time updates');
+        }
+
+        // Stop updating detector wait time statistics
+        function stopDetectorWaitTimeUpdates() {
+            if (detectorStatsUpdateInterval) {
+                clearInterval(detectorStatsUpdateInterval);
+                detectorStatsUpdateInterval = null;
+            }
+            
+            console.log('[DETECTOR WAIT] Stopped detector wait time updates');
+        }
+
+        // Update detector wait time display
+        async function updateDetectorWaitTimeDisplay() {
+            try {
+                const response = await fetch('/detector_wait_time/summary');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const summary = data.summary;
+                    
+                    // ===== CANADA ZONE =====
+                    updateElementWithAnimation('canada-avg-wait', formatTime(summary.canada.avg_wait_time));
+                    updateElementWithAnimation('canada-min-wait', formatTime(summary.canada.min_wait_time));
+                    updateElementWithAnimation('canada-max-wait', formatTime(summary.canada.max_wait_time));
+                    updateElementWithAnimation('canada-median-wait', formatTime(summary.canada.median_wait_time));
+                    updateElement('canada-completed', summary.canada.vehicles_completed);
+                    updateElement('canada-in-zone', summary.canada.vehicles_in_zone);
+                    
+                    // ===== US ZONE =====
+                    updateElementWithAnimation('us-avg-wait', formatTime(summary.us.avg_wait_time));
+                    updateElementWithAnimation('us-min-wait', formatTime(summary.us.min_wait_time));
+                    updateElementWithAnimation('us-max-wait', formatTime(summary.us.max_wait_time));
+                    updateElementWithAnimation('us-median-wait', formatTime(summary.us.median_wait_time));
+                    updateElement('us-completed', summary.us.vehicles_completed);
+                    updateElement('us-in-zone', summary.us.vehicles_in_zone);
+                    
+                    // ===== OVERALL =====
+                    updateElementWithAnimation('total-avg-wait', formatTime(summary.total.avg_wait_time));
+                    updateElement('total-completed', summary.total.total_vehicles_completed);
+                    
+                    // Calculate throughput (vehicles per minute)
+                    const throughput = calculateThroughput(summary.total.total_vehicles_completed);
+                    updateElement('system-throughput', throughput.toFixed(1) + ' veh/min');
+                    
+                    // ===== UPDATE COMPARISON BARS =====
+                    updateComparisonBars(summary.canada.avg_wait_time, summary.us.avg_wait_time);
+                    
+                    // Store for comparison
+                    previousDetectorStats = summary;
+                }
+            } catch (error) {
+                console.error('[DETECTOR WAIT] Error updating display:', error);
+            }
+        }
+
+        // Update element with animation
+        function updateElementWithAnimation(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const oldValue = element.textContent;
+                if (oldValue !== value) {
+                    element.classList.add('updating');
+                    element.textContent = value;
+                    setTimeout(() => element.classList.remove('updating'), 300);
+                }
+            }
+        }
+
+        // Update element without animation
+        function updateElement(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+
+        // Format time (seconds to readable format)
+        function formatTime(seconds) {
+            if (seconds === 0 || seconds === undefined) return '--';
+            if (seconds < 60) {
+                return seconds.toFixed(1) + 's';
+            } else {
+                const minutes = Math.floor(seconds / 60);
+                const secs = (seconds % 60).toFixed(0);
+                return `${minutes}m ${secs}s`;
+            }
+        }
+
+        // Calculate throughput (vehicles per minute)
+        let startTime = null;
+        function calculateThroughput(totalVehicles) {
+            if (!startTime) {
+                startTime = Date.now();
+                return 0;
+            }
+            
+            const elapsedMinutes = (Date.now() - startTime) / 1000 / 60;
+            if (elapsedMinutes === 0) return 0;
+            
+            return totalVehicles / elapsedMinutes;
+        }
+
+        // Update comparison bars
+        function updateComparisonBars(canadaTime, usTime) {
+            const maxTime = Math.max(canadaTime, usTime, 1); // Avoid division by zero
+            
+            const canadaWidth = (canadaTime / maxTime) * 100;
+            const usWidth = (usTime / maxTime) * 100;
+            
+            const canadaBar = document.getElementById('canada-bar');
+            const usBar = document.getElementById('us-bar');
+            const canadaBarValue = document.getElementById('canada-bar-value');
+            const usBarValue = document.getElementById('us-bar-value');
+            
+            if (canadaBar) {
+                canadaBar.style.width = canadaWidth + '%';
+                canadaBarValue.textContent = formatTime(canadaTime);
+            }
+            
+            if (usBar) {
+                usBar.style.width = usWidth + '%';
+                usBarValue.textContent = formatTime(usTime);
+            }
+        }
+
+        // Export detector wait time data
+        async function exportDetectorWaitData() {
+            try {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+                const filename = `detector_wait_times_${timestamp}.csv`;
+                
+                const response = await fetch('/detector_wait_time/export', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename: filename })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    alert(`✅ Data exported to ${filename}`);
+                } else {
+                    alert('❌ Export failed: ' + data.message);
+                }
+            } catch (error) {
+                console.error('[EXPORT] Error:', error);
+                alert('❌ Export failed');
+            }
+        }
+
+        // Download detector report
+        async function downloadDetectorReport() {
+            try {
+                const response = await fetch('/detector_wait_time/summary');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const summary = data.summary;
+                    
+                    // Create formatted report
+                    const report = `
+        === DETECTOR-BASED WAIT TIME ANALYSIS REPORT ===
+
+        Generated: ${new Date().toLocaleString()}
+
+        --- CANADA INSPECTION ZONE (E4 → E7) ---
+        Average Wait Time:    ${summary.canada.avg_wait_time.toFixed(2)} seconds
+        Minimum Wait Time:    ${summary.canada.min_wait_time.toFixed(2)} seconds
+        Maximum Wait Time:    ${summary.canada.max_wait_time.toFixed(2)} seconds
+        Median Wait Time:     ${summary.canada.median_wait_time.toFixed(2)} seconds
+        Vehicles Completed:   ${summary.canada.vehicles_completed}
+        Vehicles in Zone:     ${summary.canada.vehicles_in_zone}
+
+        --- US INSPECTION ZONE (E0: 7m → 48m) ---
+        Average Wait Time:    ${summary.us.avg_wait_time.toFixed(2)} seconds
+        Minimum Wait Time:    ${summary.us.min_wait_time.toFixed(2)} seconds
+        Maximum Wait Time:    ${summary.us.max_wait_time.toFixed(2)} seconds
+        Median Wait Time:     ${summary.us.median_wait_time.toFixed(2)} seconds
+        Vehicles Completed:   ${summary.us.vehicles_completed}
+        Vehicles in Zone:     ${summary.us.vehicles_in_zone}
+
+        --- OVERALL STATISTICS ---
+        Combined Average:     ${summary.total.avg_wait_time.toFixed(2)} seconds
+        Total Completed:      ${summary.total.total_vehicles_completed} vehicles
+
+        --- ZONE COMPARISON ---
+        Canada vs US Ratio:   ${(summary.canada.avg_wait_time / summary.us.avg_wait_time).toFixed(2)}x
+        ${summary.canada.avg_wait_time > summary.us.avg_wait_time 
+            ? 'Canada zone has longer average wait times' 
+            : 'US zone has longer average wait times'}
+                    `.trim();
+                    
+                    // Download as text file
+                    const blob = new Blob([report], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `detector_wait_report_${new Date().toISOString().split('T')[0]}.txt`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    alert('✅ Report downloaded!');
+                }
+            } catch (error) {
+                console.error('[REPORT] Error:', error);
+                alert('❌ Failed to generate report');
+            }
+        }
+
+        // ============================================================================
+        // Integration with existing simulation controls
+        // ============================================================================
+
+        // Enhance the existing startSimulation function
+        const originalStartSimulationDetector = window.startSimulation;
+        window.startSimulation = async function() {
+            // Reset throughput calculation
+            startTime = null;
+            
+            // Call original function
+            if (originalStartSimulationDetector) {
+                await originalStartSimulationDetector();
+            }
+            
+            // Start detector wait time updates
+            startDetectorWaitTimeUpdates();
+        };
+
+        // Enhance the existing stopSimulation function
+        const originalStopSimulationDetector = window.stopSimulation;
+        window.stopSimulation = async function() {
+            // Stop detector wait time updates
+            stopDetectorWaitTimeUpdates();
+            
+            // Call original function
+            if (originalStopSimulationDetector) {
+                await originalStopSimulationDetector();
+            }
+        };
+
+
+        // Initial status update
+        updateStatus();
+    </script>
+</body>
+</html>
