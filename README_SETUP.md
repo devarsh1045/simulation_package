@@ -123,3 +123,8 @@ your-project/
 - See SYSTEM_INFO.md for complete environment details
 - Always activate the virtual environment before running simulations
 - Keep requirements.txt updated when adding new dependencies
+
+## push to git 
+git add .
+git commit -m "git changes"
+git push origin main
