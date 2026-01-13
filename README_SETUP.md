@@ -125,6 +125,9 @@ your-project/
 - Keep requirements.txt updated when adding new dependencies
 
 ## push to git 
+```
 git add .
 git commit -m "git changes"
 git push origin main
+```
+
