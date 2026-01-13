@@ -8,6 +8,12 @@
 
 ## Installation Steps
 
+Create venv 
+python3 -m venv .venv
+Activate it
+source .venv/bin/activate
+
+
 ### 1. Install Python
 
 ```bash

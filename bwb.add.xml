@@ -30,20 +30,20 @@
     <!-- ================================================================== -->
     
     <!-- Canada Zone Entry Detectors (E4 at 5m) - 6 detectors -->
-    <inductionLoop id="entry_canada_0" lane="E4_0" pos="5.0" freq="1.0" file="entry_canada_0.xml" friendlyPos="true"/>
-    <inductionLoop id="entry_canada_1" lane="E4_1" pos="5.0" freq="1.0" file="entry_canada_1.xml" friendlyPos="true"/>
-    <inductionLoop id="entry_canada_2" lane="E4_2" pos="5.0" freq="1.0" file="entry_canada_2.xml" friendlyPos="true"/>
-    <inductionLoop id="entry_canada_3" lane="E4_3" pos="5.0" freq="1.0" file="entry_canada_3.xml" friendlyPos="true"/>
-    <inductionLoop id="entry_canada_4" lane="E4_4" pos="5.0" freq="1.0" file="entry_canada_4.xml" friendlyPos="true"/>
-    <inductionLoop id="entry_canada_5" lane="E4_5" pos="5.0" freq="1.0" file="entry_canada_5.xml" friendlyPos="true"/>
+    <inductionLoop id="entry_canada_0" lane="E4_0" pos="20.0" freq="1.0" file="entry_canada_0.xml" friendlyPos="true"/>
+    <inductionLoop id="entry_canada_1" lane="E4_1" pos="20.0" freq="1.0" file="entry_canada_1.xml" friendlyPos="true"/>
+    <inductionLoop id="entry_canada_2" lane="E4_2" pos="20.0" freq="1.0" file="entry_canada_2.xml" friendlyPos="true"/>
+    <inductionLoop id="entry_canada_3" lane="E4_3" pos="20.0" freq="1.0" file="entry_canada_3.xml" friendlyPos="true"/>
+    <inductionLoop id="entry_canada_4" lane="E4_4" pos="20.0" freq="1.0" file="entry_canada_4.xml" friendlyPos="true"/>
+    <inductionLoop id="entry_canada_5" lane="E4_5" pos="20.0" freq="1.0" file="entry_canada_5.xml" friendlyPos="true"/>
     
     <!-- Canada Zone Exit Detectors (E7 at 17.5m) - 6 detectors -->
-    <inductionLoop id="exit_canada_0" lane="E7_0" pos="17.5" freq="1.0" file="exit_canada_0.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_canada_1" lane="E7_1" pos="17.5" freq="1.0" file="exit_canada_1.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_canada_2" lane="E7_2" pos="17.5" freq="1.0" file="exit_canada_2.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_canada_3" lane="E7_3" pos="17.5" freq="1.0" file="exit_canada_3.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_canada_4" lane="E7_4" pos="17.5" freq="1.0" file="exit_canada_4.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_canada_5" lane="E7_5" pos="17.5" freq="1.0" file="exit_canada_5.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_canada_0" lane="E7_0" pos="54.0" freq="1.0" file="exit_canada_0.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_canada_1" lane="E7_1" pos="54.0" freq="1.0" file="exit_canada_1.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_canada_2" lane="E7_2" pos="54.0" freq="1.0" file="exit_canada_2.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_canada_3" lane="E7_3" pos="54.0" freq="1.0" file="exit_canada_3.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_canada_4" lane="E7_4" pos="54.0" freq="1.0" file="exit_canada_4.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_canada_5" lane="E7_5" pos="54.0" freq="1.0" file="exit_canada_5.xml" friendlyPos="true"/>
     
     <!-- US Zone Entry Detectors (E0 at 7m) - 14 detectors -->
     <inductionLoop id="entry_us_0" lane="E0_0" pos="7.0" freq="1.0" file="entry_us_0.xml" friendlyPos="true"/>
@@ -62,20 +62,20 @@
     <inductionLoop id="entry_us_13" lane="E0_13" pos="7.0" freq="1.0" file="entry_us_13.xml" friendlyPos="true"/>
     
     <!-- US Zone Exit Detectors (E0 at 48m) - 14 detectors -->
-    <inductionLoop id="exit_us_0" lane="E0_0" pos="48.0" freq="1.0" file="exit_us_0.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_1" lane="E0_1" pos="48.0" freq="1.0" file="exit_us_1.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_2" lane="E0_2" pos="48.0" freq="1.0" file="exit_us_2.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_3" lane="E0_3" pos="48.0" freq="1.0" file="exit_us_3.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_4" lane="E0_4" pos="48.0" freq="1.0" file="exit_us_4.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_5" lane="E0_5" pos="48.0" freq="1.0" file="exit_us_5.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_6" lane="E0_6" pos="48.0" freq="1.0" file="exit_us_6.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_7" lane="E0_7" pos="48.0" freq="1.0" file="exit_us_7.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_8" lane="E0_8" pos="48.0" freq="1.0" file="exit_us_8.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_9" lane="E0_9" pos="48.0" freq="1.0" file="exit_us_9.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_10" lane="E0_10" pos="48.0" freq="1.0" file="exit_us_10.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_11" lane="E0_11" pos="48.0" freq="1.0" file="exit_us_11.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_12" lane="E0_12" pos="48.0" freq="1.0" file="exit_us_12.xml" friendlyPos="true"/>
-    <inductionLoop id="exit_us_13" lane="E0_13" pos="48.0" freq="1.0" file="exit_us_13.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_0" lane="E0_0" pos="170.0" freq="1.0" file="exit_us_0.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_1" lane="E0_1" pos="170.0" freq="1.0" file="exit_us_1.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_2" lane="E0_2" pos="170.0" freq="1.0" file="exit_us_2.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_3" lane="E0_3" pos="170.0" freq="1.0" file="exit_us_3.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_4" lane="E0_4" pos="170.0" freq="1.0" file="exit_us_4.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_5" lane="E0_5" pos="170.0" freq="1.0" file="exit_us_5.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_6" lane="E0_6" pos="170.0" freq="1.0" file="exit_us_6.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_7" lane="E0_7" pos="170.0" freq="1.0" file="exit_us_7.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_8" lane="E0_8" pos="170.0" freq="1.0" file="exit_us_8.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_9" lane="E0_9" pos="170.0" freq="1.0" file="exit_us_9.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_10" lane="E0_10" pos="170.0" freq="1.0" file="exit_us_10.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_11" lane="E0_11" pos="170.0" freq="1.0" file="exit_us_11.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_12" lane="E0_12" pos="170.0" freq="1.0" file="exit_us_12.xml" friendlyPos="true"/>
+    <inductionLoop id="exit_us_13" lane="E0_13" pos="170.0" freq="1.0" file="exit_us_13.xml" friendlyPos="true"/>
     <!-- Detectors -->
     <laneAreaDetector id="e2_0" lane="E0_0" pos="22.33" length="10.00" period="300.00" file="e2_0.xml"/>
     <laneAreaDetector id="e2_1" lane="E0_1" pos="22.33" length="10.00" period="300.00" file="e2_1.xml"/>
